@@ -10,7 +10,7 @@ const conversationSchema = new Schema(
       type: String,      // Stored as a string
       required: true,    // Cannot be null or undefined
       trim: true,        // Removes leading and trailing spaces
-      minLength: 3,      // Minimum length of 3 characters
+      minlength: 3,      // Minimum length of 3 characters
     },
 
     // Reference to the User who owns this conversation
