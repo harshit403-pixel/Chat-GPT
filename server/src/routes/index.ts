@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authRouter } from "./auth.routes.js";
+import { chatRouter } from "./chat.route.js";
 
 
 
@@ -10,6 +11,6 @@ router.get("/health", (_req, res) => {
 });
 
 router.use("/auth", authRouter);
-
+router.use("/chat",chatRouter)
 
 export { router };

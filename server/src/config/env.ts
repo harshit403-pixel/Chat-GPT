@@ -21,6 +21,7 @@ export const env: AppEnv = {
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL ?? "15m",
   refreshTokenTtl: process.env.REFRESH_TOKEN_TTL ?? "7d",
   refreshCookieName: process.env.REFRESH_COOKIE_NAME ?? "refreshToken",
+  mistralApiKey:required("MISTRAL_API_KEY")
 };
 
 export const isProduction = env.nodeEnv === "production";

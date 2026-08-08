@@ -35,7 +35,7 @@ const conversationSchema = new Schema(
 // '&' merges another type into it.
 // We manually add '_id' because MongoDB automatically creates it,
 // but InferSchemaType doesn't include it by default.
-export type conversationDocument =
+export type ConversationDocument =
   InferSchemaType<typeof conversationSchema> & {
     _id: Types.ObjectId;
   };

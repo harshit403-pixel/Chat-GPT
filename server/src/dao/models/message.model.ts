@@ -24,7 +24,7 @@ const messageSchema = new Schema({
     timestamps:true
 })
 
-export type messageDocument = InferSchemaType<typeof messageSchema>&{
+export type MessageDocument = InferSchemaType<typeof messageSchema>&{
     _id: Types.ObjectId
 }
 

@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@langchain/core": "^1.2.3",
+    "@langchain/core": "^1.2.5",
     "@langchain/mistralai": "^1.2.0",
     "@tavily/core": "^0.7.6",
     "bcryptjs": "^3.0.3",
