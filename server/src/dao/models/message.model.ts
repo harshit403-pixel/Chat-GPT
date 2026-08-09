@@ -10,7 +10,8 @@ const messageSchema = new Schema({
     author:{
         type:String,
         enum:["user","ai"],
-        defaul:"user"
+        defaul:"user",
+        required:true
 
     },
     content:{
