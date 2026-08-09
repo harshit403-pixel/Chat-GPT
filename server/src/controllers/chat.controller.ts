@@ -4,76 +4,140 @@ import { RequestMessage } from "../types/chat.js";
 import { getConversationTitle, getStream } from "../service/ai.service.js";
 import { conversationDao } from "../dao/conversation.dao.js";
 import { messageDao } from "../dao/message.dao.js";
+import { ApiError } from "../utils/api-error.js";
+import { HumanMessage, AIMessage, ToolMessage, AIMessageChunk } from "langchain";
 
-// Handles the complete chat flow:
-// 1. Authenticate the user
-// 2. Create a new conversation (if needed)
-// 3. Save the user's message
-// 4. Stream the AI response to the client
-// 5. Save the AI's response
-export const chatController = asyncHandler(
-  async (req: Request<{}, {}, RequestMessage>, res: Response) => {
-    // Extract message and conversation ID from the request body
-    let { message, conversationId } = req.body;
-
-    // Authenticated user added by the auth middleware
+export const listConversations = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const user = req.user;
-
-    // Reject the request if the user is not authenticated
     if (!user) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
+        throw new ApiError(401, "Unauthorized");
     }
 
-    // If no conversation ID is provided, create a new conversation
-    if (!conversationId) {
-      // Generate a short AI title based on the first message
-      const title = await getConversationTitle({ message });
+    const conversations = await conversationDao.findConversationsByUser(user.userId);
 
-      // Store the new conversation in the database
-      const newConversation = await conversationDao.createConversation({
-        title,
-        user: user.userId,
-      });
-
-      // Use the newly created conversation ID
-      conversationId = newConversation._id.toString();
-    }
-
-    // Save the user's message to the database
-    await messageDao.createMessage({
-      content: message,
-      author: "user",
-      conversation: conversationId,
+    res.status(200).json({
+        conversations: conversations.map((conversation) => ({
+            id: conversation._id.toString(),
+            title: conversation.title,
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt
+        }))
     });
+});
 
-    // Generate a streaming AI response
-    const stream = await getStream({ message });
-
-    // Configure Server-Sent Events (SSE) headers
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-
-    // Collect the complete AI response while streaming it
-    let aiMessage = "";
-
-    // Send each generated chunk to the client in real time
-    for await (const chunk of stream) {
-      res.write(`data: ${chunk.text}\n\n`);
-
-      // Store each chunk so the complete response can be saved later
-      aiMessage += chunk.text;
+export const getConversation = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const user = req.user;
+    if (!user) {
+        throw new ApiError(401, "Unauthorized");
     }
 
-    // Close the SSE connection
-    res.end();
+    const conversation = await conversationDao.findConversationByIdAndUser(
+        String(req.params.conversationId),
+        user.userId
+    );
+    if (!conversation) {
+        throw new ApiError(404, "Conversation not found");
+    }
 
-    // Save the complete AI response to the database
-    await messageDao.createMessage({
-      content: aiMessage,
-      author: "ai",
-      conversation: conversationId,
-    });
-  }
+    const messages = await messageDao.findMessagesByConversation(
+  conversation._id.toString()
 );
+
+    res.status(200).json({
+        conversation: {
+            id: conversation._id.toString(),
+            title: conversation.title,
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
+            messages: messages.map((message) => ({
+                id: message._id.toString(),
+                author: message.author,
+                content: message.content,
+                createdAt: message.createdAt
+            }))
+        }
+    });
+});
+
+/**
+ * POST /api/v1/chat/conversation
+ * 
+ * req.body = {
+ *     message: string,
+ *     conversationId?: string
+ * }
+ */
+export const chatController = asyncHandler(async (req: Request<{}, {}, RequestMessage>, res: Response): Promise<void> => {
+
+    let { message, conversationId } = req.body;
+    let conversationTitle: string;
+    const user = req.user; // Assuming user is attached to the request object after authentication
+
+    if (!user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+
+    if (!conversationId) {
+        conversationTitle = await getConversationTitle({ message });
+        const newConversation = await conversationDao.createConversation({
+            user: user.userId,
+            title: conversationTitle,
+        })
+
+        conversationId = newConversation._id.toString();
+    } else {
+        const conversation = await conversationDao.findConversationByIdAndUser(
+            conversationId,
+            user.userId
+        );
+        if (!conversation) {
+            throw new ApiError(404, "Conversation not found");
+        }
+        conversationTitle = conversation.title;
+    }
+
+    await messageDao.createMessage({
+        content: message,
+        author: "user",
+        conversation: conversationId
+    })
+
+    //gettiong the convbo msgs to send in ai ques so that it can remebere prev msgs
+    const messages = await messageDao.findMessagesByConversation(conversationId);
+    //now we want data like 
+    //HumanMessage then AIMessage then HumanMessage
+
+const stream = await getStream({messages, userId:user.userId});
+
+// Configure SSE headers
+res.setHeader("Content-Type", "text/event-stream");
+res.setHeader("Cache-Control", "no-cache");
+res.setHeader("Connection", "keep-alive");
+
+// Send conversation metadata in response headers
+res.setHeader("X-Conversation-Id", conversationId);
+res.setHeader("X-Conversation-Title", encodeURIComponent(conversationTitle));
+
+let aiMessage = "";
+
+// Stream AI response
+for await (const [token,metadata] of stream) {
+
+    if(token.getType() === "ai"){
+
+  aiMessage += token.text;
+
+  // Send each chunk to the frontend
+  res.write(`data: ${JSON.stringify(token.text)}\n\n`);}
+}
+
+// Close the stream
+res.end();
+
+// Save the complete AI response
+await messageDao.createMessage({
+  content: aiMessage,
+  author: "ai",
+  conversation: conversationId,
+});});

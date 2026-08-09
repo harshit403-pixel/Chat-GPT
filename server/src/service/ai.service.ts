@@ -1,7 +1,9 @@
 import { ChatMistralAI } from "@langchain/mistralai";
 import { env } from "../config/env.js";
-import { createAgent, HumanMessage } from "langchain";
+import { AIMessage, createAgent, HumanMessage } from "langchain";
 import * as z from "zod";
+import { MongoMessage } from "../types/chat.js";
+import { getMemoryTool, updateMemoryTool } from "./ai/tools.js";
 
 
 // Small Mistral model used for lightweight tasks like title generation
@@ -59,10 +61,35 @@ Rules:
   return response.structuredResponse.title;
 } 
 
-export async function getStream({message}:{message:string}):Promise<ReadableStream>
+export async function getStream({messages , userId}:{messages:MongoMessage[], userId:string}):Promise<ReadableStream>
     {
+const agent = createAgent({
+  model: mediumModel,
+  tools: [getMemoryTool, updateMemoryTool],
+  systemPrompt: ` Read memory ocntext to make the conversation more personalized and update the memory whenever you notice a fact that will be relavant for weeks/months. current userid ${userId}
+  `,
+});
         
-        const stream = await mediumModel.stream(message)
-        return stream
+
+
+const stream = await agent.stream(
+    {
+      messages: messages.map((message) => {
+        if (message.author === "user") {
+          return new HumanMessage(message.content);
+        }
+
+        return new AIMessage(message.content);
+      }),
+    },
+    {
+      configurable: {
+        userId,
+      },
+      streamMode: "messages",
     }
+  );
+
+  return stream;
+}
 
