@@ -3,7 +3,7 @@ import { env } from "../config/env.js";
 import { AIMessage, createAgent, HumanMessage } from "langchain";
 import * as z from "zod";
 import { MongoMessage } from "../types/chat.js";
-import { getMemoryTool, updateMemoryTool } from "./ai/tools.js";
+import { getMemoryTool, getWebResultTool, updateMemoryTool } from "./ai/tools.js";
 
 
 // Small Mistral model used for lightweight tasks like title generation
@@ -65,9 +65,25 @@ export async function getStream({messages , userId}:{messages:MongoMessage[], us
     {
 const agent = createAgent({
   model: mediumModel,
-  tools: [getMemoryTool, updateMemoryTool],
-  systemPrompt: ` Read memory ocntext to make the conversation more personalized and update the memory whenever you notice a fact that will be relavant for weeks/months. current userid ${userId}
-  `,
+  tools: [getMemoryTool, updateMemoryTool, getWebResultTool],
+systemPrompt: `
+You are a helpful AI assistant.
+
+Current date: ${new Date().toISOString().split("T")[0]}
+User ID: ${userId}
+
+Memory:
+- Use getMemory when existing user context can help personalize the response.
+- Use updateMemory when the user shares information likely to remain relevant for weeks or months, such as preferences, goals, habits, or ongoing projects.
+- Do not save temporary or trivial information.
+- Preserve useful existing context when updating memory.
+
+Web:
+- Use getWebResult for current, recent, factual, or web-based information.
+- Do not use web search when you can answer reliably without it.
+
+Always prioritize the user's request and use tools only when useful.
+`,
 });
         
 
@@ -86,7 +102,7 @@ const stream = await agent.stream(
       configurable: {
         userId,
       },
-      streamMode: "messages",
+      streamMode: ["messages","values"],
     }
   );
 

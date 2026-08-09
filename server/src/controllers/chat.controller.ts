@@ -122,14 +122,24 @@ res.setHeader("X-Conversation-Title", encodeURIComponent(conversationTitle));
 let aiMessage = "";
 
 // Stream AI response
-for await (const [token,metadata] of stream) {
+for await (const [mode,data] of stream) {
 
+    if(mode==="messages"){
+
+        const [token,metadata] = data
+    
     if(token.getType() === "ai"){
 
   aiMessage += token.text;
 
   // Send each chunk to the frontend
   res.write(`data: ${JSON.stringify(token.text)}\n\n`);}
+} else if(mode==="values"){
+
+    console.log("recieved values", data)
+
+}
+
 }
 
 // Close the stream

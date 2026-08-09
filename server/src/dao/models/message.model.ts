@@ -9,7 +9,7 @@ const messageSchema = new Schema({
     },
     author:{
         type:String,
-        enum:["user","ai"],
+        enum:["user","ai","tool"],
         defaul:"user",
         required:true
 
@@ -19,7 +19,18 @@ const messageSchema = new Schema({
         required:true,
         trim:true,
         minlength:1
-    }
+    },
+    toolcalls:[
+        {
+            arguments:Object,
+            id:String,
+            name:String
+
+        }
+    
+    ],
+    toolCallId:String
+
 
 },{
     timestamps:true

@@ -7,6 +7,7 @@ export type AppEnv = {
   accessTokenTtl: string;
   refreshTokenTtl: string;
   refreshCookieName: string;
-  mistralApiKey:string
-  
+  mistralApiKey:string;
+  tavilyApiKey:string;
+  langsmithApiKey:string
 };

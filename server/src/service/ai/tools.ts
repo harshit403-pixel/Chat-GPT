@@ -2,6 +2,7 @@ import { tool } from "langchain"
 import {  contextDao } from "../../dao/context.dao.js"
 
 import * as z from "zod"
+import { getResultFromWeb } from "../web.service.js"
 
 
 
@@ -39,3 +40,20 @@ export const updateMemoryTool = tool(
         }),
     }
 )
+
+
+export const getWebResultTool = tool(
+  async ({ query }: { query: string }) => {
+    const result = await getResultFromWeb({ query });
+    return result;
+  },
+  {
+    name: "getWebResult",
+    description: "Search the web for the given query and return the results.",
+    schema: z.object({
+      query: z
+        .string()
+        .describe("The search query to look up on the web"),
+    }),
+  }
+);
