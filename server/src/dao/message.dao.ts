@@ -2,7 +2,7 @@ import { MessageModel, type MessageDocument } from "./models/message.model.js"
 import type { Message, MongoMessage } from "../types/chat.js"
 
 
-class MessageDao {
+class MessageDAO {
 
 
     async createMessage(messageData: Message): Promise<MessageDocument> {
@@ -13,7 +13,8 @@ class MessageDao {
             content,
             author,
             conversation,
-    
+            toolCallId: messageData.toolCallId,
+            toolCalls: messageData.toolCalls,
         });
 
         return message;
@@ -27,10 +28,11 @@ class MessageDao {
             conversation: message.conversation.toString(),
             createdAt: message.createdAt,
             updatedAt: message.updatedAt,
-           
+            toolCallId: message.toolCallId,
+            toolCalls: message.toolCalls,
         }));
     }
 
 }
 
-export const messageDao = new MessageDao();
+export const messageDao = new MessageDAO();

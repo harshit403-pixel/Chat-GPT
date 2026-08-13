@@ -4,7 +4,7 @@ export type RequestMessage = {
 }
 
 export type Message = {
-    author: "user" | "ai" 
+    author: "user" | "ai" | "tool";
     content: string;
     conversation: string;
     toolCalls?: {
@@ -15,7 +15,7 @@ export type Message = {
     toolCallId?: string | null;
 }
 
-//this is basically the upgraded versiopn of message that comes from mongo after saving both human and ai amesdsagfe in convo 
+
 export type MongoMessage = Message & {
     _id: string;
     createdAt: Date;

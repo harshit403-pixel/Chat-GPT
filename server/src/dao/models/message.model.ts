@@ -20,7 +20,7 @@ const messageSchema = new Schema({
         trim:true,
         minlength:1
     },
-    toolcalls:[
+    toolCalls:[
         {
             arguments:Object,
             id:String,
